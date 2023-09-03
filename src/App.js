@@ -14,54 +14,76 @@ Amplify.configure(config);
 
 function App({ signOut }) {
   const [filename, setFilename] = useState("")
-  const [access_token, setToken] = useState("")
+  const [accesstoken, setAccessToken] = useState("")
   const [username, setUsername] = useState("")
+  const [files, setFiles] = useState([])
 
   const getFilename = (val) => {
     setFilename(val)
   }
 
   useEffect(() => {
-    const user = Auth.currentAuthenticatedUser()
-    const token = user.signInUserSession.accessToken
-    console.log(user.username)
-    console.log(token)
-    //setToken(token)
-    //setUsername(user.username)
-  })
+    const getToken = async () => {
+
+      const username = await Auth.currentAuthenticatedUser()
+      console.log(username.username)
+
+      if (username) {
+        setUsername(username.username)
+      }
+
+    }
+    getToken()
+  }, [])
 
   useEffect(() => {
-    const token_value = {
-      'access_token': access_token
-    }
-    const loadfile = async () => {
+    const getFiles = async () => {
+
       try {
-        const res = await fetch("https://pimvhp4mb5.execute-api.eu-north-1.amazonaws.com/dev/savedfiles",
+        const user = await Auth.currentSession()
+        const token = user.accessToken.jwtToken
+        setAccessToken(token)
+        const tokenValue = {
+          'access_Token': token
+        }
+        let res = await fetch("https://pimvhp4mb5.execute-api.eu-north-1.amazonaws.com/dev/savedfiles",
           {
-            method: 'post',
-            body: JSON.stringify(token_value)
+            method: 'POST',
+
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            mode: 'cors',
+            body: JSON.stringify(tokenValue)
           })
         if (res.ok) {
+          const details = await res.json()
+          //console.log(details)
+          if (details.body) {
+            const result = details.body
+            setFiles(result)
+          }
+        }
+        else {
           console.log(res)
-        } else {
-          console.log("files file to load")
         }
       } catch (err) {
         console.log(err)
       }
     }
-    loadfile();
+    getFiles()
+  }, [files])
 
-  }, [])
+
 
   return (
     <>
-      <div>welcome to your dashboard {username}</div>
+      <div>Welcome to your dashboard {username}</div>
       <div>
         <p>{filename}</p>
       </div>
-      <Form filename={getFilename} />
-      <Files />
+      <Form filename={getFilename} token={accesstoken} username={username} />
+      <Files files={files} username={username} />
       <p>
         <button onClick={signOut}>Logout</button>
       </p>
